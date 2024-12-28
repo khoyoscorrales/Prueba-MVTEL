@@ -1,0 +1,73 @@
+import json
+from collections import defaultdict
+
+def procesar_datos(archivo_json):
+    try:
+        # Leer el archivo JSON con codificación utf-8
+        with open(archivo_json, 'r', encoding='utf-8') as file:
+            transacciones = json.load(file)
+        
+        # Validaciones básicas
+        if not isinstance(transacciones, list):
+            raise ValueError("El archivo JSON debe contener una lista de transacciones.")
+
+        cliente_gasto = defaultdict(float)
+        producto_ventas = defaultdict(int)
+
+        # Procesar transacciones
+        for transaccion in transacciones:
+            try:
+                cliente = transaccion["cliente"]
+                productos = transaccion["productos"]
+
+                # Procesar los productos en la transacción
+                for producto in productos:
+                    nombre = producto["nombre"]
+                    precio = float(producto["precio"])
+                    cantidad = int(producto["cantidad"])
+
+                    # Actualizar gastos por cliente
+                    cliente_gasto[cliente] += precio * cantidad
+
+                    # Actualizar ventas por producto
+                    producto_ventas[nombre] += cantidad
+
+            except KeyError as e:
+                raise ValueError(f"Transacción incompleta: falta el campo {e}.")
+            except (ValueError, TypeError):
+                raise ValueError("Datos mal formateados en la transacción.")
+
+        # Encontrar el cliente con mayor gasto
+        cliente_mayor_gasto = max(cliente_gasto, key=cliente_gasto.get, default="N/A")
+        gasto_mayor = cliente_gasto[cliente_mayor_gasto]
+
+        # Encontrar el(los) producto(s) más vendido(s)
+        max_cantidad = max(producto_ventas.values(), default=0)
+        productos_mas_vendidos = [
+            producto for producto, cantidad in producto_ventas.items() if cantidad == max_cantidad
+        ]
+
+        return {
+            "cliente_mayor_gasto": cliente_mayor_gasto,
+            "gasto_mayor": gasto_mayor,
+            "productos_mas_vendidos": productos_mas_vendidos,
+            "cantidad_mas_vendida": max_cantidad,
+        }
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"No se encontró el archivo {archivo_json}.")
+    except json.JSONDecodeError:
+        raise ValueError("El archivo JSON está mal formateado.")
+
+# Ejecución
+if __name__ == "__main__":
+    archivo = (r"data.json")
+    try:
+        resultado = procesar_datos(archivo)
+        print("Resumen:")
+        print(f"Cliente con mayor gasto: {resultado['cliente_mayor_gasto']} (${resultado['gasto_mayor']:.2f})")
+        print("Producto(s) más vendido(s):")
+        for producto in resultado["productos_mas_vendidos"]:
+            print(f" - {producto} (Cantidad: {resultado['cantidad_mas_vendida']})")
+    except Exception as e:
+        print(f"Error: {e}")
